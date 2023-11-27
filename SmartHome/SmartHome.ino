@@ -60,9 +60,9 @@ int temperature = 0;
 
 BlynkTimer timer;
 
-char auth[] = ""; // 토큰 입력란
-char ssid[] = ""; // WIFI 입력란
-char pass[] = ""; // PASSWORD 입력란
+char auth[] = "";
+char ssid[] = "";
+char pass[] = "";
 
 const char* ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = 3600 * 9; // GMT+9
@@ -189,7 +189,7 @@ BLYNK_WRITE(VIRTUAL_PIN_FAN_STATE) {
 BLYNK_WRITE(VIRTUAL_PIN_MOTOR_CONTROL) {
   int val = param.asInt();
   if (val == 1) {
-    ledcWrite(1, 80);
+    ledcWrite(1, 180);
     ledcWrite(2, 0);
     delay(2000);
     ledcWrite(1, 0);
@@ -197,7 +197,7 @@ BLYNK_WRITE(VIRTUAL_PIN_MOTOR_CONTROL) {
   }
   else {
     ledcWrite(1, 0);
-    ledcWrite(2, 80);
+    ledcWrite(2, 180);
     delay(2000);
     ledcWrite(1, 0);
     ledcWrite(2, 0);       
@@ -206,16 +206,31 @@ BLYNK_WRITE(VIRTUAL_PIN_MOTOR_CONTROL) {
 
 
 void displayValuesOnTFT(String currentTime, int temperature, int humidity, int co2Value, int gasValue) {
+  
   tft.fillScreen(ILI9341_NAVY); 
-  tft.drawRoundRect(0,0,239,319,10, ILI9341_BLUE); // 테두리 둥근 사각형, x 시작점, y 시작점, x 넓이, y 넓이, 모서리 반경, 선색상
+  tft.drawRoundRect(0,0,319,239,10, ILI9341_WHITE); 
   tft.setCursor(0, 0);
+  tft.setTextSize(3);
+  tft.setTextColor(ILI9341_WHITE); 
+  tft.println("Current Time: ");
+  
   tft.setTextSize(2);
+  tft.println(currentTime);
+  tft.println();
+  
+  tft.setTextSize(3);
   tft.setTextColor(ILI9341_YELLOW); 
-  tft.println("Current Time: " + currentTime);
   tft.println("Temperature: " + String(temperature) + " C");
+  tft.println();
   tft.println("Humidity: " + String(humidity) + " %");
+  tft.println();
+  tft.setTextSize(3);
+  tft.setTextColor(ILI9341_RED); 
   tft.println("CO2 Level: " + String(co2Value));
-  tft.println("Gas Sensor Value: " + String(gasValue));
+  tft.println();
+  tft.setTextSize(3);
+  tft.setTextColor(ILI9341_GREEN); 
+  tft.println("Gas Value: " + String(gasValue));
 }
 
 void sendCurrentTimeToBlynk() {
@@ -317,7 +332,8 @@ void setup() {
 
   dht.begin();
   tft.begin();
-
+  
+  tft.setRotation(1);
   pinMode(fanPin, OUTPUT);
   pinMode(GAS_PIN, INPUT);
 
@@ -349,7 +365,7 @@ void loop() {
   timer.run();
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousBlynkUpdateTime >= 2000) {
+  if (currentMillis - previousBlynkUpdateTime >= 1000) {
     Blynk.virtualWrite(VIRTUAL_PIN_CURRENT_TIME, "Current Time: " + getFormattedTime());
     previousBlynkUpdateTime = currentMillis;
   }
