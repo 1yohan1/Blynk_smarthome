@@ -1,3 +1,5 @@
+// 최종
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_ILI9341.h>
 #include <WiFi.h>
@@ -6,11 +8,11 @@
 #include <BlynkSimpleEsp32.h>
 #include <DHT.h>
 #include <MHZ19.h>
-
 #define BLYNK_PRINT Serial
 
-unsigned long previousTftUpdateTime = 0;
 unsigned long previousBlynkUpdateTime = 0;
+unsigned long motorStartTime = 0;
+bool motorRunning = false;
 
 #define DHT_PIN 0
 #define DHT_TYPE DHT11
@@ -20,6 +22,7 @@ MHZ19 mhz(&Serial2);
 #define fanPin 5 
 #define motor1 25
 #define motor2 26
+#define MOTOR_DELAY_MICROS 2000000
 
 #define TFT_CS    15
 #define TFT_DC    2
@@ -27,7 +30,6 @@ MHZ19 mhz(&Serial2);
 #define TFT_CLK   18
 #define TFT_RST   4
 #define TFT_MISO  19
-
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
 
 int relay1Pin = 32;
@@ -52,7 +54,7 @@ int lastToggle3State = HIGH;
 #define VIRTUAL_PIN_MOTOR_CONTROL  V5
 #define VIRTUAL_PIN_CURRENT_TIME V6
 #define VIRTUAL_PIN_RELAY_1_STATE V7
-#define VIRTUAL_PIN_RELAY_2_STATE V8
+#define VIRTUAL_PIN_RELAY_2_STATE  V8
 #define VIRTUAL_PIN_RELAY_3_STATE V9
 
 int fanControl = 0;
@@ -60,9 +62,9 @@ int temperature = 0;
 
 BlynkTimer timer;
 
-char auth[] = "";
-char ssid[] = "";
-char pass[] = "";
+char auth[] = ""; // Token 입력
+char ssid[] = ""; // WIFI 입력
+char pass[] = ""; // PASSWORD 입력
 
 const char* ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = 3600 * 9; // GMT+9
@@ -75,21 +77,17 @@ enum FanState {
   MANUAL_OFF
 };
 
-FanState fanState = AUTO_OFF;
+FanState fanState = MANUAL_OFF;
 
-void tftUpdateTask() {
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousTftUpdateTime >= 1000) {
-    sendSensorData();
-    previousTftUpdateTime = currentMillis;
-  }
-}
-
-void blynkUpdateTask() {
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousBlynkUpdateTime >= 1000) {
-    sendCurrentTimeToBlynk();
-    previousBlynkUpdateTime = currentMillis;
+void checkMotorStatus() {
+  if (motorRunning) {
+    unsigned long currentTime = micros();
+    if (currentTime - motorStartTime >= MOTOR_DELAY_MICROS) {
+      // 모터 동작 시간이 지났으므로 모터를 정지시킴
+      ledcWrite(1, 0);
+      ledcWrite(2, 0);
+      motorRunning = false;  // 모터 동작 중 플래그 해제
+    }
   }
 }
 
@@ -109,38 +107,19 @@ void syncTime() {
   }
 }
 
+String getFormattedTime() {
+  struct tm *timeinfo;
+  time_t now = time(nullptr);
+  timeinfo = localtime(&now);
+
+  char buffer[30];
+  strftime(buffer, 30, "%a %b %d %H:%M:%S / %Y", timeinfo);
+  return String(buffer);
+}
+
 void sendSensorData() {
   temperature = dht.readTemperature();
-  int humidity = dht.readHumidity();
-
-  switch(fanState) {
-    case AUTO_OFF:
-      if (temperature > 25) {
-        digitalWrite(fanPin, HIGH);
-        fanState = AUTO_ON;
-      }
-      break;
-
-    case AUTO_ON:
-      if (temperature <= 25) {
-        digitalWrite(fanPin, LOW);
-        fanState = AUTO_OFF;
-      }
-      break;
-
-    case MANUAL_ON:
-      digitalWrite(fanPin, HIGH);
-      break;
-
-    case MANUAL_OFF:
-      digitalWrite(fanPin, LOW);
-      if (fanControl == 0 && temperature > 25) {
-        fanState = AUTO_ON;
-      } else {
-        fanState = AUTO_OFF;
-      }
-      break;
-  }  
+  int humidity = dht.readHumidity();  
 
   MHZ19_RESULT response = mhz.retrieveData();
   int co2Value = -1; 
@@ -154,53 +133,76 @@ void sendSensorData() {
   Blynk.virtualWrite(VIRTUAL_PIN_HUMIDITY, humidity);
   Blynk.virtualWrite(VIRTUAL_PIN_CO2, co2Value);
   Blynk.virtualWrite(VIRTUAL_PIN_GAS, gasValue);
-  Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
 
   if (gasValue > 700){
     Blynk.logEvent("gas_alert", "Gas Leakage Detected");
   }
+  
+  switch(fanState) {
+    case AUTO_OFF:
+      if (temperature > 21) {
+        digitalWrite(fanPin, HIGH);
+        Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
+        fanState = AUTO_ON;
+      }
+      break;
+
+    case AUTO_ON:
+      if (temperature <= 21) {
+        digitalWrite(fanPin, LOW);
+        Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
+        fanState = AUTO_OFF;
+      }
+      break;
+
+    case MANUAL_ON:
+      digitalWrite(fanPin, HIGH);
+      break;
+
+    case MANUAL_OFF:
+      digitalWrite(fanPin, LOW);
+      if (fanControl == 0 && temperature > 21) {
+        fanState = AUTO_ON;
+      } else {
+        fanState = AUTO_OFF;
+      }
+      break;
+  }
+  
   String currentTime = getFormattedTime();
   displayValuesOnTFT(currentTime, temperature, humidity, co2Value, gasValue);
 }
 
-String getFormattedTime() {
-  struct tm *timeinfo;
-  time_t now = time(nullptr);
-  timeinfo = localtime(&now);
-
-  char buffer[30];
-  strftime(buffer, 30, "%a %b %d %H:%M:%S / %Y", timeinfo);
-  return String(buffer);
-}
 
 BLYNK_WRITE(VIRTUAL_PIN_FAN_STATE) { 
   int manualFanControl = param.asInt(); 
 
   if(manualFanControl == 1) {
     fanState = MANUAL_ON;
+    digitalWrite(fanPin, HIGH);
+    Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
   } else {
     fanState = MANUAL_OFF;
-    if (temperature <= 25) {
+    if (temperature <= 21) {
       digitalWrite(fanPin, LOW);
+      Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
     }
   }
 }
 
 BLYNK_WRITE(VIRTUAL_PIN_MOTOR_CONTROL) {
   int val = param.asInt();
+  
   if (val == 1) {
-    ledcWrite(1, 180);
-    ledcWrite(2, 0);
-    delay(2000);
-    ledcWrite(1, 0);
-    ledcWrite(2, 0);  
-  }
-  else {
     ledcWrite(1, 0);
     ledcWrite(2, 180);
-    delay(2000);
-    ledcWrite(1, 0);
-    ledcWrite(2, 0);       
+    motorStartTime = millis();  // 모터 시작 시간 기록
+    motorRunning = true;        // 모터 동작 중 플래그 설정
+  } else {
+    ledcWrite(1, 180);
+    ledcWrite(2, 0);
+    motorStartTime = millis();  // 모터 시작 시간 기록
+    motorRunning = true;        // 모터 동작 중 플래그 설정
   }
 }
 
@@ -343,7 +345,6 @@ void setup() {
   pinMode(toggleSwitch1Pin, INPUT_PULLUP);
   pinMode(toggleSwitch2Pin, INPUT_PULLUP);
   pinMode(toggleSwitch3Pin, INPUT_PULLUP);
-  timer.setInterval(1000L, sendRelayState);
 
   digitalWrite(relay1Pin, HIGH);
   digitalWrite(relay2Pin, HIGH);
@@ -351,24 +352,23 @@ void setup() {
 
   connectToWiFi();
   syncTime();
-
-  timer.setInterval(1000L, tftUpdateTask);
-  timer.setInterval(1000L, blynkUpdateTask);
   
   Blynk.begin(auth, ssid, pass, "blynk.cloud", 80);
-  timer.setInterval(1000L, sendSensorData);
-  timer.setInterval(1000L, sendCurrentTimeToBlynk);
+
+  timer.setInterval(1000L, onTimer);
 }
 
+void onTimer() {
+  sendRelayState();
+  sendCurrentTimeToBlynk();
+  sendSensorData();
+}
 void loop() {
   Blynk.run();
   timer.run();
+  checkMotorStatus();
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousBlynkUpdateTime >= 1000) {
-    Blynk.virtualWrite(VIRTUAL_PIN_CURRENT_TIME, "Current Time: " + getFormattedTime());
-    previousBlynkUpdateTime = currentMillis;
-  }
 
   int toggle1State = digitalRead(toggleSwitch1Pin);
   int toggle2State = digitalRead(toggleSwitch2Pin);
@@ -392,4 +392,5 @@ void loop() {
   lastToggle1State = toggle1State;
   lastToggle2State = toggle2State;
   lastToggle3State = toggle3State;
+  
 }
