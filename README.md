@@ -52,7 +52,7 @@ enum FanState {
 };
   switch(fanState) {
     case AUTO_OFF:
-      if (temperature > 21) {
+      if (temperature > 25) {
         digitalWrite(fanPin, HIGH);
         Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
         fanState = AUTO_ON;
@@ -60,7 +60,7 @@ enum FanState {
       break;
 
     case AUTO_ON:
-      if (temperature <= 21) {
+      if (temperature <= 25) {
         digitalWrite(fanPin, LOW);
         Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
         fanState = AUTO_OFF;
@@ -73,7 +73,7 @@ enum FanState {
 
     case MANUAL_OFF:
       digitalWrite(fanPin, LOW);
-      if (fanControl == 0 && temperature > 21) {
+      if (fanControl == 0 && temperature > 25) {
         fanState = AUTO_ON;
       } else {
         fanState = AUTO_OFF;
@@ -118,7 +118,8 @@ void setup(){
 - 2번 릴레이 = 안방 전구 제어
 - 3번 릴레이 = 거실 & 안방 전구 동시 제어
 
-![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/6b012077-c7e8-4341-bb96-6fe67503e169)
+![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/866bb528-b6c5-495b-baaf-768e34e8ff9e)
+
 
 
 
@@ -126,6 +127,9 @@ void setup(){
   ![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/caa91496-c739-4192-afff-c5a87303daa7)
 
   #### Google Assistant 음성으로 제어
+
+![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/a327d61e-ec71-4fef-a9a4-a8acc2298972)
+
  
   - 에어컨 모듈 on/off
   - 블라인드 커튼 close/open
