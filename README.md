@@ -1,4 +1,4 @@
-# Blynk & IFTTT Smart Home
+# Blynk & Google Assistant Smart Home
 - Blynk와 IFTTT 플랫폼을 활용하여 스마트 디바이스 및 응용 프로그램과 Google Assistant를 통한 음성 제어 관리하는 시스템을 구축.
 
 ## 프로젝트 목적
