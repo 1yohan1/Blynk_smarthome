@@ -2,7 +2,9 @@
 - Blynk와 IFTTT 플랫폼을 활용하여 스마트 디바이스 및 응용 프로그램과 Google Assistant를 통한 음성 제어 관리하는 시스템을 구축.
 
 ## 프로젝트 목적
-- 원격 제어를 통한 편리함과 에너지 절약
+- 원격 제어를 통한 편리함
+- 안전성(화재 예방)
+- 에너지 절약
 
 ### 개발 보드
 - ESP32 Dev Module
@@ -31,13 +33,19 @@
   }
 ```
 ![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/88ac1d3c-5788-4549-9f92-fef8ba6be240)
+![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/290d38f1-ec9f-473b-ab94-058a0046c901)
 
-#### Co2 ppm이 1000 이상일 시 환기 필요 메세지 이메일 전송 및 알람 기능 추가.
+
+#### Co2 ppm이 1500 이상일 시 환기 필요 메세지 이메일 전송 및 알람 기능 추가.
 ``` C++
-  if (co2Value > 1000 ) {
+  if (co2Value > 1500 ) {
     Blynk.logEvent("co2_alert", "Co2 is too high Let's ventilate");
   }
 ```
+
+![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/8d9bbe40-e5a4-491a-b4ac-208d5294bf97)
+![image](https://github.com/1yohan1/Blynk_smarthome/assets/149892068/1f7ec37a-0910-47f5-b2dd-a621ee13eaa2)
+
 
 #### Fan을 air conditioner 기능으로 사용.
 - Temperature value 26'c 이상 자동 Fan 모듈 on
