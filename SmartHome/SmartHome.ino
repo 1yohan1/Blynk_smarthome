@@ -127,6 +127,11 @@ void sendSensorData() {
   if (response == MHZ19_RESULT_OK) {
     co2Value = mhz.getCO2();
   }
+  
+  if (co2Value > 1500){
+    Blynk.logEvent("co2_alert", "Co2 is too high Let's ventilate");
+  }
+  
   int gasValue = analogRead(GAS_PIN);
 
   Blynk.virtualWrite(VIRTUAL_PIN_TEMPERATURE, temperature);
@@ -140,7 +145,7 @@ void sendSensorData() {
   
   switch(fanState) {
     case AUTO_OFF:
-      if (temperature > 21) {
+      if (temperature > 25) {
         digitalWrite(fanPin, HIGH);
         Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
         fanState = AUTO_ON;
@@ -148,7 +153,7 @@ void sendSensorData() {
       break;
 
     case AUTO_ON:
-      if (temperature <= 21) {
+      if (temperature <= 25) {
         digitalWrite(fanPin, LOW);
         Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
         fanState = AUTO_OFF;
@@ -161,7 +166,7 @@ void sendSensorData() {
 
     case MANUAL_OFF:
       digitalWrite(fanPin, LOW);
-      if (fanControl == 0 && temperature > 21) {
+      if (fanControl == 0 && temperature > 25) {
         fanState = AUTO_ON;
       } else {
         fanState = AUTO_OFF;
@@ -183,7 +188,7 @@ BLYNK_WRITE(VIRTUAL_PIN_FAN_STATE) {
     Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
   } else {
     fanState = MANUAL_OFF;
-    if (temperature <= 21) {
+    if (temperature <= 25) {
       digitalWrite(fanPin, LOW);
       Blynk.virtualWrite(VIRTUAL_PIN_FAN_STATE, digitalRead(fanPin));
     }
