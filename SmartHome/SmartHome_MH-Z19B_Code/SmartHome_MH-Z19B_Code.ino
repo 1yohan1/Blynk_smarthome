@@ -23,6 +23,11 @@ void sendSensorData() {
   if (response == MHZ19_RESULT_OK) {
     co2Value = mhz.getCO2();
   }
+
+  if (co2Value > 1500){
+    Blynk.logEvent("co2_alert", "Co2 is too high Let's ventilate");
+  }
+  
   Blynk.virtualWrite(VIRTUAL_PIN_CO2, co2Value);
 }
 
