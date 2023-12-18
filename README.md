@@ -161,7 +161,7 @@ void setup(){
   timer.setInterval(1000L, onTimer);
   ```
   
-#### TFT-LCD 해결방안
+### TFT-LCD 해결방안
 - Mutex, Semaphor를 통해 해결해보려함
 ``` C++
  TaskHandle_t tftTask;
@@ -207,7 +207,7 @@ TFT-LCD 클리어 도중 멈추는 현상이 발생
 듀얼 채널 할당 후 바뀌기 전 화면, 바뀐 후 화면을 번갈아가며 디스플레이하여 블라인드 클리어 방식을 변경.
   
 - 다른 LCD 모듈 사용, Liquid Crystal Display, Organic Light Emitting Diodes 등
-#### 자동화 서비스 도입
+### 자동화 서비스 도입
 현재 자동화 시스템이 도입된 것은 에어컨 자동 On/Off기능밖에 없다.
 추가로 신발장 아래 물체감지센서와 출입문 도어락 감지센서를 통해 집으로 들어오면 전구가 일괄적으로 켜지고, 집을 나가면 일괄적으로 꺼지는 기능을 구현할 예정.
 
